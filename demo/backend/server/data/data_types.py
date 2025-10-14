@@ -22,6 +22,9 @@ class Video(relay.Node):
     poster_path: Optional[str]
     width: int
     height: int
+    fps: Optional[float]
+    duration_sec: Optional[float]
+    num_video_frames: Optional[int]
 
     @strawberry.field
     def url(self) -> str:

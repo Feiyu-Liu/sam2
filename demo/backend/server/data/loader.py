@@ -12,6 +12,7 @@ from typing import Dict, Optional
 
 import imagesize
 from app_conf import GALLERY_PATH, POSTERS_PATH, POSTERS_PREFIX
+from data.transcoder import get_video_metadata
 from data.data_types import Video
 from tqdm import tqdm
 
@@ -43,6 +44,9 @@ def get_video(
     generate_poster: bool = True,
     width: Optional[int] = None,
     height: Optional[int] = None,
+    fps: Optional[float] = None,
+    duration_sec: Optional[float] = None,
+    num_video_frames: Optional[int] = None,
     verbose: Optional[bool] = False,
 ) -> Video:
     """
@@ -83,10 +87,36 @@ def get_video(
         # rendering previews in the mosaic video preview.
         width, height = imagesize.get(poster_output_path)
 
+    # 如果仍有缺失的元数据，使用解封装读取视频元信息进行补齐
+    if (
+        fps is None
+        or duration_sec is None
+        or width is None
+        or height is None
+        or num_video_frames is None
+    ):
+        try:
+            md = get_video_metadata(str(filepath))
+            if fps is None:
+                fps = md.fps
+            if duration_sec is None:
+                duration_sec = md.duration_sec
+            if width is None:
+                width = md.width
+            if height is None:
+                height = md.height
+            if num_video_frames is None:
+                num_video_frames = md.num_video_frames
+        except Exception:
+            pass
+
     return Video(
         code=video_path,
         path=video_path if file_key is None else file_key,
         poster_path=poster_path,
         width=width,
         height=height,
+        fps=fps,
+        duration_sec=duration_sec,
+        num_video_frames=num_video_frames,
     )

@@ -115,6 +115,9 @@ class Mutation:
             file_key=file_key,
             width=vm.width,
             height=vm.height,
+            fps=vm.fps,
+            duration_sec=vm.duration_sec,
+            num_video_frames=vm.num_video_frames,
             generate_poster=False,
         )
         return video
