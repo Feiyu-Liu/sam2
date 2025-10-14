@@ -38,7 +38,7 @@ from data.data_types import (
 )
 from data.loader import get_video
 from data.store import get_videos
-from data.transcoder import get_video_metadata, transcode, VideoMetadata
+from data.transcoder import get_video_metadata, VideoMetadata
 from inference.data_types import (
     AddPointsRequest,
     CancelPropagateInVideoRequest,
@@ -294,8 +294,12 @@ def process_video(
     Returns the filepath, s3_file_key, hash & video metaedata as a tuple.
     """
     with tempfile.TemporaryDirectory() as tempdir:
-        in_path = f"{tempdir}/in.mp4"
-        out_path = f"{tempdir}/out.mp4"
+        # 尽量保留原始扩展名；若不可用则退回为 .mp4
+        original_filename = getattr(file, "filename", None) or "uploaded.mp4"
+        _, ext = os.path.splitext(original_filename)
+        ext = ext if ext else ".mp4"
+
+        in_path = f"{tempdir}/in{ext}"
         with open(in_path, "wb") as in_f:
             in_f.write(file.read())
 
@@ -312,43 +316,15 @@ def process_video(
         if video_metadata.duration_sec in (None, 0):
             raise Exception("video container does time duration metadata")
 
-        start_time_sec, duration_time_sec = _get_start_sec_duration_sec(
-            max_time=max_time,
-            start_time_sec=start_time_sec,
-            duration_time_sec=duration_time_sec,
-        )
+        # 直接使用原始上传文件：根据原始内容生成哈希并存储，不做任何处理
+        file_hash = get_file_hash(in_path)
+        file_key = UPLOADS_PREFIX + "/" + f"{file_hash}{ext}"
+        filepath = os.path.join(UPLOADS_PATH, f"{file_hash}{ext}")
 
-        # Transcode video to make sure videos returned to the app are all in
-        # the same format, duration, resolution, fps.
-        transcode(
-            in_path,
-            out_path,
-            video_metadata,
-            seek_t=start_time_sec,
-            duration_time_sec=duration_time_sec,
-        )
+        shutil.move(in_path, filepath)
 
-        os.remove(in_path)  # don't need original video now
-
-        out_video_metadata = get_video_metadata(out_path)
-        if out_video_metadata.num_video_frames == 0:
-            raise Exception(
-                "transcode produced empty video; check seek time or your input video"
-            )
-
-        filepath = None
-        file_key = None
-        with open(out_path, "rb") as file_data:
-            file_hash = get_file_hash(file_data)
-            file_data.seek(0)
-
-            file_key = UPLOADS_PREFIX + "/" + f"{file_hash}.mp4"
-            filepath = os.path.join(UPLOADS_PATH, f"{file_hash}.mp4")
-
-        assert filepath is not None and file_key is not None
-        shutil.move(out_path, filepath)
-
-        return filepath, file_key, out_video_metadata
+        # 返回原始视频的元数据
+        return filepath, file_key, video_metadata
 
 
 schema = strawberry.Schema(

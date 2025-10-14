@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import {Effects} from '@/common/components/video/effects/Effects';
+import { Effects } from '@/common/components/video/effects/Effects';
 
 type EffectLayers = {
   background: keyof Effects;
@@ -31,8 +31,8 @@ export const ABOUT_URL = 'https://ai.meta.com/sam2';
 export const EMAIL_ADDRESS = 'segment-anything@meta.com';
 export const BLOG_URL = 'http://ai.meta.com/blog/sam2';
 
-export const VIDEO_API_ENDPOINT = 'http://localhost:7263';
-export const INFERENCE_API_ENDPOINT = 'http://localhost:7263';
+export const VIDEO_API_ENDPOINT = 'http://10.102.64.48:7263';
+export const INFERENCE_API_ENDPOINT = 'http://10.102.64.48:7263';
 
 export const demoObjectLimit = 3;
 
