@@ -4,6 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import contextlib
+import gc
 import logging
 import os
 import uuid
@@ -423,5 +424,26 @@ class InferenceAPI:
             )
             return False
         else:
+            # Aggressively clear this session's inference state to release GPU memory
+            try:
+                state = session.get("state") if isinstance(session, dict) else None
+                if isinstance(state, dict):
+                    # Remove large tensors such as video frames and cached features first
+                    state.pop("images", None)
+                    state.pop("cached_features", None)
+                    # Clear any remaining references held in the state dict
+                    state.clear()
+
+                # Drop the session dict reference itself
+                del session
+
+                # Trigger Python GC and clear CUDA cache to return unused blocks
+                gc.collect()
+                if getattr(self, "device", None) is not None and getattr(self.device, "type", None) == "cuda":
+                    torch.cuda.empty_cache()
+            except Exception:
+                # Cleanup failures should not break CloseSession; log and continue
+                logger.exception("failed to clear session state for %s", session_id)
+
             logger.info(f"removed session {session_id}; {self.__get_session_stats()}")
             return True
